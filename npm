@@ -1,0 +1,64 @@
+#!/bin/bash
+# /usr/bin/npm
+
+# Set this to the executable of your choice
+newcmd="auto" # Default is auto, you can change this to 'pnpm', 'bun', etc.
+
+# Set this to 'true' to enable debugging logs, or 'false' to disable.
+# Some programs don't play nice with the extra debug output
+debuglogs="true"
+
+# Capture the arguments passed to this script
+args="$*"
+
+# Debug logging function
+debug_echo() {
+  if [ "$debuglogs" = "true" ]; then
+    echo "$@"
+  fi
+}
+
+# Detect installed package managers
+# Order of detection: Yarn, Bun, PNPM, NPM
+detect_pm() {
+  if command -v yarn &>/dev/null; then
+    newcmd="yarn"
+  elif command -v bun &>/dev/null; then
+    newcmd="bun"
+  elif command -v pnpm &>/dev/null; then
+    newcmd="pnpm"
+  elif command -v npm &>/dev/null; then
+    newcmd="npm"
+  else
+    debug_echo "After searching, no package manager was found. This is most likely due to not having any of the four (yarn, bun, npm, npm) installed correctly. If you believe this is a mistake, edit this file and change newcmd to an alternate package manager."
+    echo "No package manager found (yarn, bun, pnpm, npm)."
+    exit 1
+  fi
+}
+
+if [ "$newcmd" = "auto" ]; then
+  detect_pm
+fi
+
+# Print the original command (if debugging is enabled)
+debug_echo "Original command: npm $args"
+
+# Handle the translation based on the new command
+if [ "$newcmd" = "yarn" || "$newcmd" = "bun" ]; then
+  # For yarn/bun, translate 'npm install' to 'yarn/bun add'
+  if echo "$args" | grep -q '^install'; then
+    after_install=$(echo "$args" | sed 's/^install //')
+    output="$newcmd add $after_install"
+  else
+    output="$newcmd $args"
+  fi
+else
+  # For other commands or package managers, replace 'npm' with newcmd
+  output="$newcmd $args"
+fi
+
+# Print the transformed command (if debugging is enabled)
+debug_echo "Transformed command: $output"
+
+# Execute the transformed command
+eval "$output"
